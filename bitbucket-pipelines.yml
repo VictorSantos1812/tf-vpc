@@ -1,0 +1,43 @@
+image: hashicorp/terraform:latest
+
+pipelines:
+    branches:
+      lab-425569462785:
+          - step:
+               name: TF PLAN RUNNER 425569462785-LAB
+               oidc: true
+               script:
+                 - export AWS_REGION=us-east-1
+                 - export AWS_ROLE_ARN=arn:aws:iam::425569462785:role/BitBucktetIntegrationService
+                 - export AWS_WEB_IDENTITY_TOKEN_FILE=$(pwd)/web-identity-token
+                 - echo $BITBUCKET_STEP_OIDC_TOKEN > $(pwd)/web-identity-token
+                 - terraform init -reconfigure -backend-config=environments/425569462785/425569462785.tfbackend -var-file=environments/425569462785/425569462785.tfvars
+                 - terraform plan -var-file=environments/425569462785/425569462785.tfvars -out state-425569462785.tfplan
+                 - terraform plan -var-file=environments/425569462785/425569462785.tfvars -destroy -out state-destroy-425569462785.tfplan
+               artifacts:
+                 - state-425569462785.tfplan
+                 - state-destroy-425569462785.tfplan
+          - parallel:
+              steps:
+                - step:
+                    name: TF APPLY CREATE RUNNER 425569462785-LAKE-PRD
+                    oidc: true
+                    trigger: 'manual'
+                    script:
+                      - export AWS_REGION=sa-east-1
+                      - export AWS_ROLE_ARN=arn:aws:iam::425569462785:role/BitBucktetIntegrationService
+                      - export AWS_WEB_IDENTITY_TOKEN_FILE=$(pwd)/web-identity-token
+                      - echo $BITBUCKET_STEP_OIDC_TOKEN > $(pwd)/web-identity-token
+                      - terraform init -reconfigure -backend-config=environments/425569462785/425569462785.tfbackend -var-file=environments/425569462785/425569462785.tfvars
+                      - terraform apply -auto-approve "state-425569462785.tfplan"
+                - step:
+                    name: TF APPLY DELETE RUNNER 425569462785-LAKE-PRD
+                    oidc: true
+                    trigger: 'manual'
+                    script:
+                      - export AWS_REGION=sa-east-1
+                      - export AWS_ROLE_ARN=arn:aws:iam::425569462785:role/BitBucktetIntegrationService
+                      - export AWS_WEB_IDENTITY_TOKEN_FILE=$(pwd)/web-identity-token
+                      - echo $BITBUCKET_STEP_OIDC_TOKEN > $(pwd)/web-identity-token
+                      - terraform init -reconfigure -backend-config=environments/425569462785/425569462785.tfbackend -var-file=environments/425569462785/425569462785.tfvars
+                      - terraform apply -destroy "state-destroy-425569462785.tfplan"

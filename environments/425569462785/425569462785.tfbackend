@@ -1,0 +1,4 @@
+encrypt = true
+bucket  = "lab-425569462785-tfstate"
+region  = "us-east-1"
+key     = "lab/eks/eks-tf.state"
